@@ -1,5 +1,6 @@
 const User = require("../models/user.js")
 const argon2 = require("argon2")
+const { Worker } = require('worker_threads')
 
 const get = async (req, res) => {
     try {
@@ -52,12 +53,22 @@ const create = async (req, res) => {
 
         if (password !== confirmPassword) return res.status(400).json({message: "Password tidak sama"})
         
-        await User.create({
+        const data = {
             name,
             email,
             password: await hashedPassword,
             role
-        })
+        }
+
+        new Worker("./src/worker/create-user.js", { workerData: data })
+
+        // bisa tidak sync?
+        // User.create({
+        //     name,
+        //     email,
+        //     password: await hashedPassword,
+        //     role
+        // })
         
         return res.status(200).json({message: "Register berhasil"})    
 
@@ -70,12 +81,12 @@ const create = async (req, res) => {
 const update = async (req, res) => {
     try {
 
-        const {
-            id,
+        const { id, oldPassword ,confirmPassword } = req.body
+
+        let {
             name, 
             email, 
-            password, 
-            confirmPassword, 
+            newPassword, 
             role
         } = req.body
 
@@ -88,20 +99,23 @@ const update = async (req, res) => {
 
         if (!user) return res.status(400).json({message: "Update gagal"})  
 
-        let hashedPassword
-        if (password === "" || password === null) {
-            password = user.password
+        // meski update namun masih membutuhkan password lama (di form confirmPassword), lebih baik confirmPassword diganti old password dan menambahkan new password
+
+        if (!await argon2.verify(user.password, oldPassword)) {
+            return res.status(400).json({message: "Gagal update (anda tidak ter-auth)"})
+        } 
+
+        if (newPassword === "" || newPassword === null) {
+            newPassword = user.password
         } else {
-            hashedPassword = argon2.hash(password)
+            if (newPassword !== confirmPassword) return res.status(400).json({message: "Password tidak sama"})
+            newPassword = await argon2.hash(newPassword)
         }
 
-        // meski update namun masih membutuhkan password lama, lebih baik confirmPassword diganti old password dan menambahkan new password
-        if (password !== confirmPassword) return res.status(400).json({message: "Password tidak sama"})
-
-        await User.update({
+        User.update({
             name,
             email,
-            password: await hashedPassword,
+            password: newPassword,
             role
         }, {
             where: {
@@ -131,7 +145,7 @@ const destroy = async (req, res) => {
 
         if (!user) return res.status(400).json({message: "Delete gagal"})  
 
-        await User.destroy({
+        User.destroy({
             where: {
                 id: user.id
             }
