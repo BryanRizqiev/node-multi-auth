@@ -4,12 +4,16 @@ const cors = require("cors")
 const session = require("express-session")
 const userRoute = require("./routes/user-route")
 const productRoute = require("./routes/product-route")
+const multer = require("multer")
 
 const app = express()
+const upload = multer()
 
-// app.use(express.urlencoded({
-//     extended: false
-// }))
+app.use(express.json())
+app.use(upload.array())
+app.use(express.urlencoded({
+    extended: true
+}))
 
 app.use(cors({
     credentials: true,
@@ -24,8 +28,6 @@ app.use(session({
         secure: "auto"
     }
 }))
-
-app.use(express.json())
 
 app.use(userRoute)
 app.use(productRoute)
