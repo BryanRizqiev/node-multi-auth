@@ -5,6 +5,7 @@ const session = require("express-session")
 const userRoute = require("./routes/user-route")
 const productRoute = require("./routes/product-route")
 const multer = require("multer")
+const auth = require("./routes/auth-route")
 
 const app = express()
 const upload = multer()
@@ -29,6 +30,7 @@ app.use(session({
     }
 }))
 
+app.use(auth)
 app.use(userRoute)
 app.use(productRoute)
 

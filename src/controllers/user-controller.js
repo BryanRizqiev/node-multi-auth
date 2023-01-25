@@ -2,6 +2,9 @@ const User = require("../models/user.js")
 const argon2 = require("argon2")
 const { Worker } = require('worker_threads')
 
+// perlu dipertimbangkan (kalau membiarkan promise kebuka atau pakai worker (yang disini diimplementasikan)) 
+// karena proses berhasil tidaknya kurang sync 
+
 const get = async (req, res) => {
     try {
 
