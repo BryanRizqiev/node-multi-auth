@@ -1,4 +1,4 @@
-const { Sequelize, DataTypes } = require("sequelize")
+const { DataTypes } = require("sequelize")
 const db = require("../config/database.js")
 
 const user = db.define("users", {
@@ -21,6 +21,7 @@ const user = db.define("users", {
     email: {
         type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
         validate: {
             notEmpty: true,
             isEmail: true
@@ -31,7 +32,7 @@ const user = db.define("users", {
         allowNull: false,
         validate: {
             notEmpty: true,
-            len:[3, 50]
+            len:[3, 255]
         } 
     },
     role: {

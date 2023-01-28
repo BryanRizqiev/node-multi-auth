@@ -1,6 +1,6 @@
 const User = require("../models/user.js")
 const argon2 = require("argon2")
-const { Worker } = require('worker_threads')
+const { Worker, threadId } = require('worker_threads')
 
 // perlu dipertimbangkan (kalau membiarkan promise kebuka atau pakai worker (yang disini diimplementasikan)) 
 // karena proses berhasil tidaknya kurang sync 
@@ -8,9 +8,20 @@ const { Worker } = require('worker_threads')
 const get = async (req, res) => {
     try {
 
-        const datas = await User.findAll({
-            attributes: ["name", "email", "role"]
-        })
+        let datas
+        console.log(req.role)
+        if (req.role === "common") {
+            datas = await User.findAll({
+                where: {
+                    role: "common"
+                },
+                attributes: ["name", "email", "role"]
+            })
+        } else {
+            datas = await User.findAll({
+                attributes: ["name", "email", "role"]
+            })
+        }
 
         return res.status(200).json(datas)    
 
@@ -23,13 +34,24 @@ const get = async (req, res) => {
 const getById = async (req, res) => {
     try {
 
-        const id = req.params.id
-        const data = await User.findOne({
-            where: {
-                uuid: id
-            },
-            attributes: ["name", "email", "role"]
-        })
+        let data
+        console.log(req.role)
+        if (req.role === "common") {
+            data = await User.findOne({
+                where: {
+                    uuid: req.params.id,
+                    role: "common"
+                },
+                attributes: ["name", "email", "role"]
+            })
+        } else {
+            data = await User.findOne({
+                where: {
+                    uuid: req.params.id
+                },
+                attributes: ["name", "email", "role"]
+            })
+        }
 
         if (!data) return res.status(400).json({message: "Data tidak ditemukan"})  
 
@@ -63,7 +85,23 @@ const create = async (req, res) => {
             role
         }
 
-        new Worker("./src/worker/create-user.js", { workerData: data })
+        // dibawah buat validasi, lebih baik ada service sendiri buat validasi seperti validasi email ada service sendiri
+        // biar bisa realtime dan lebih oke dalam pembagian resource 
+
+        // async tapi yang mengerjakan thread lain
+        const isOk = new Promise((resolve, reject) => {
+            const worker = new Worker("./src/worker/user-controller-worker.js", { workerData: {
+                action: "create_user",
+                data
+            } })
+
+            worker.on("message", resolve)
+            worker.on("error", reject)
+            worker.on("exit", code  => {
+                if (code  !==  0)
+                    reject(new  Error(`Worker stopped with exit code ${code}`))
+            })
+        })
 
         // bisa tidak sync?
         // User.create({
@@ -72,6 +110,8 @@ const create = async (req, res) => {
         //     password: await hashedPassword,
         //     role
         // })
+
+        await isOk
         
         return res.status(200).json({message: "Register berhasil"})    
 
@@ -137,6 +177,7 @@ const update = async (req, res) => {
 // karena delete tidak boleh menjadi nama variabel
 const destroy = async (req, res) => {
     try {
+        console.log("Oke")
         
         const id = req.body.id
         const user = await User.findOne({
@@ -146,13 +187,29 @@ const destroy = async (req, res) => {
             attributes: ["id"]
         })
 
-        if (!user) return res.status(400).json({message: "Delete gagal"})  
+        if (!user) return res.status(400).json({message: "Delete gagal (user tidak ditemukan)"})
 
-        User.destroy({
-            where: {
-                id: user.id
-            }
+        const isOk = new Promise((resolve, reject) => {
+            const worker = new Worker("./src/worker/user-controller-worker.js", { workerData: {
+                action: "delete_user",
+                data: user.id
+            }}
+            )
+            worker.on("message", resolve)
+            worker.on("error", reject)
+            worker.on("exit", code  => {
+                if (code  !==  0)
+                    reject(new  Error(`Worker stopped with exit code ${code}`))
+            })
         })
+
+        await isOk 
+
+        // User.destroy({
+        //     where: {
+        //         id: user.id
+        //     }
+        // })
 
         return res.status(200).json({message: "Delete berhasil"})    
 

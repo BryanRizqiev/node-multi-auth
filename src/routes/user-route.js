@@ -1,5 +1,5 @@
 const express = require("express")
-
+const { verifyAuth, adminOnly } = require("../middleware/auth.js")
 const {
     get,
     getById,
@@ -10,10 +10,10 @@ const {
 
 const router = express.Router()
 
-router.get("/user", get)
-router.get("/user/:id", getById)
-router.post("/user/create", create)
-router.post("/user/update", update)
-router.post("/user/delete", destroy)
+router.get("/user", verifyAuth, get)
+router.get("/user/:id", verifyAuth, getById)
+router.post("/user/create", verifyAuth, adminOnly, create)
+router.post("/user/update", verifyAuth, adminOnly, update)
+router.post("/user/delete", verifyAuth, adminOnly, destroy)
 
 module.exports = router

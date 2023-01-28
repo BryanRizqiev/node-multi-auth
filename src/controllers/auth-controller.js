@@ -14,9 +14,9 @@ const login = async (req, res) => {
         attributes: ["uuid", "name", "email", "password", "role"]
     })
 
-    if (!user) return res.status(400).json({message: "User tidak ditemukan"}) 
+    if (!user) return res.status(400).json({message: "Tidak auth (user tidak ditemukan)"}) 
     
-    if (!await argon2.verify(user.password, (password === "" || password === undefined) ? "" : password)) return res.status(400).json({message: "Tidak ter-auth"})
+    if (!await argon2.verify(user.password, (password === "" || password === undefined) ? "" : password)) return res.status(400).json({message: "Tidak auth"})
     
     req.session.userId = user.uuid
     delete user.dataValues.password
@@ -25,7 +25,7 @@ const login = async (req, res) => {
 
 const check = async (req, res) => {
     if (!req.session.userId) {
-        return res.status(400).json({message: "Mohon login ke akun anda"}) 
+        return res.status(400).json({message: "Tidak auth (user tidak ditemukan)"}) 
     }
 
     const user = await User.findOne({
@@ -35,7 +35,7 @@ const check = async (req, res) => {
         attributes: ["uuid", "name", "email", "role"]
     })
 
-    if (!user) return res.status(400).json({message: "User tidak ditemukan"}) 
+    if (!user) return res.status(400).json({message: "User tidak ditemukan (user tidak ditemukan)"}) 
 
     return res.status(200).json(user)
 }
