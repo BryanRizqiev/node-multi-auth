@@ -46,6 +46,10 @@ app.use(session({
 //     })
 // })()
 
+app.get('/testing', (req, res) => {
+    res.send('Hello World!')
+})
+
 app.use(auth)
 app.use(userRoute)
 app.use(productRoute)
