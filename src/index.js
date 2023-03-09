@@ -59,6 +59,6 @@ app.use((err, req, res, next) => {
     return res.status(500).json({message: "Error"})
 })
 
-app.listen(process.env.PORT, () => {
+app.listen(3000, () => {
     console.log("localhost:" + process.env.PORT)
 })
